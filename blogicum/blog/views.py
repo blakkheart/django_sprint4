@@ -39,8 +39,10 @@ class PostCreateView(LoginRequiredMixin, CreateView):
     template_name = 'blog/create.html'
 
     def get_success_url(self):
-        return reverse('blog:profile',
-                       kwargs={'profile_slug': self.object.author})  # type: ignore
+        return reverse(
+            'blog:profile',
+            kwargs={'profile_slug': self.object.author}  # type: ignore
+            )
 
     def form_valid(self, form):
         form.instance.author = self.request.user
@@ -131,11 +133,11 @@ def profile(request, profile_slug):
     if request.user.username == profile_slug:
         posts = Post.objects.filter(  # type: ignore
             author__username=profile_slug
-            ).order_by('-pub_date')
+        ).order_by('-pub_date')
     else:
         posts = Post.objects.published(  # type: ignore
             author__username=profile_slug
-            ).order_by('-pub_date')
+        ).order_by('-pub_date')
     paginator = Paginator(posts, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -219,5 +221,7 @@ class CommentDeleteView(LoginRequiredMixin, DeleteView):
         counter = Post.objects.get(pk=self.get_object().post_id)
         counter.comment_count -= 1
         counter.save()
-        return reverse('blog:post_detail',
-                       kwargs={'pk': self.get_object().post_id})  # type: ignore
+        return reverse(
+            'blog:post_detail',
+            kwargs={'pk': self.get_object().post_id}  # type: ignore
+            )
