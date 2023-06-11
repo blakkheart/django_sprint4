@@ -85,7 +85,8 @@ class Post(PublishedAndCreatedModel):
     )
     objects = PublishedQueryset.as_manager()
     comment_count = models.PositiveIntegerField(
-        null=True,
+        default=0,
+        blank=True,
         verbose_name='Количество комментариев',
     )
 
@@ -106,6 +107,11 @@ class Comment(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    # def save(self, *args, **kwargs):
+    #     if not self.pk:
+    #         Post.objects.filter(pk=self.pk).update(comment_count=F('comment_count')+1)
+    #     super().save(*args, **kwargs)
 
     class Meta:
         ordering = ('created_at',)

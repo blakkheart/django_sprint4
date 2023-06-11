@@ -1,3 +1,5 @@
+from django.http import Http404
+from django.utils import timezone
 from django.views.generic import (
     ListView, CreateView, UpdateView, DeleteView, DetailView
 )
@@ -12,7 +14,7 @@ from django.urls import reverse
 from django.shortcuts import redirect, render, get_object_or_404
 
 from blog.models import Post, Category, Comment
-from blog.forms import PostForm, CommentForm, CategoryForm, UserUpdateForm
+from blog.forms import PostForm, CommentForm, UserUpdateForm
 
 User = get_user_model()
 
@@ -20,6 +22,11 @@ User = get_user_model()
 class PostListView(ListView):
     '''показывать все посты.'''
     model = Post
+    queryset = Post.objects.filter(
+        is_published=True,
+        pub_date__lt=timezone.now(),
+        category__is_published=True
+    )
     ordering = '-pub_date'
     paginate_by = 10
     template_name = 'blog/index.html'
@@ -37,7 +44,6 @@ class PostCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.author = self.request.user
-        form.instance.comment_count = 0
         return super().form_valid(form)
 
 
@@ -95,9 +101,19 @@ class CategoryDetailView(DetailView):
     model = Category
     template_name = 'blog/category.html'
 
+    def dispatch(self, request, *args, **kwargs):
+        instance = get_object_or_404(Category, slug=kwargs['slug'])
+        if not instance.is_published:
+            raise Http404
+        return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        posts = Post.objects.filter(category__slug=self.object.slug).order_by('-pub_date')
+        posts = Post.objects.filter(
+            is_published=True,
+            pub_date__lt=timezone.now(),
+            category__is_published=True,
+            category__slug=self.object.slug).order_by('-pub_date')
         paginator = Paginator(posts, 10)
         page_number = self.request.GET.get('page')
         page_obj = paginator.get_page(page_number)
@@ -112,9 +128,14 @@ def profile(request, profile_slug):
         User,
         username=profile_slug,
     )
-    posts = Post.objects.published(  # type: ignore
-        author__username=profile_slug
-        ).order_by('-pub_date')
+    if request.user.username == profile_slug:
+        posts = Post.objects.filter(  # type: ignore
+            author__username=profile_slug
+            ).order_by('-pub_date')
+    else:
+        posts = Post.objects.published(  # type: ignore
+            author__username=profile_slug
+            ).order_by('-pub_date')
     paginator = Paginator(posts, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -154,6 +175,9 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
         form.instance.author = self.request.user
         form.instance.post_id = self.kwargs['pk']
         form.instance.object = self.object
+        counter = Post.objects.get(pk=form.instance.post_id)
+        counter.comment_count += 1
+        counter.save()
         return super().form_valid(form)
 
     def get_success_url(self):
@@ -167,6 +191,13 @@ class CommentUpdateView(LoginRequiredMixin, UpdateView):
     form_class = CommentForm
     template_name = 'blog/comment.html'
 
+    def dispatch(self, request, *args, **kwargs):
+        instance = get_object_or_404(Comment, pk=kwargs['pk'])
+        if instance.author != request.user:
+            return redirect('blog:post_detail',
+                            self.get_object().pk)
+        return super().dispatch(request, *args, **kwargs)
+
     def get_success_url(self):
         return reverse('blog:post_detail',
                        kwargs={'pk': self.object.post_id})  # type: ignore
@@ -177,6 +208,16 @@ class CommentDeleteView(LoginRequiredMixin, DeleteView):
     model = Comment
     template_name = 'blog/comment.html'
 
+    def dispatch(self, request, *args, **kwargs):
+        instance = get_object_or_404(Comment, pk=kwargs['pk'])
+        if instance.author != request.user:
+            return redirect('blog:post_detail',
+                            self.get_object().pk)
+        return super().dispatch(request, *args, **kwargs)
+
     def get_success_url(self):
+        counter = Post.objects.get(pk=self.get_object().post_id)
+        counter.comment_count -= 1
+        counter.save()
         return reverse('blog:post_detail',
                        kwargs={'pk': self.get_object().post_id})  # type: ignore

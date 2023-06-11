@@ -1,6 +1,6 @@
 from django import forms
 
-from blog.models import Post, Comment, Category
+from blog.models import Post, Comment
 
 from django.contrib.auth import get_user_model
 
@@ -20,12 +20,6 @@ class CommentForm(forms.ModelForm):
     class Meta:
         model = Comment
         fields = ('text', )
-
-
-class CategoryForm(forms.ModelForm):
-    class Meta:
-        model = Category
-        fields = ('slug',)
 
 
 class UserUpdateForm(forms.ModelForm):

@@ -20,10 +20,11 @@ class PostAdimn(admin.ModelAdmin):
         'created_at',
         'location',
         'category',
+        'comment_count'
     )
     list_display_links = ('title',)
     list_editable = (
-        'is_published',
+        'is_published', 'comment_count'
     )
 
     search_fields = (

@@ -150,3 +150,9 @@ media/
 
 sent_emails/
 
+blogicum/sent_emails/
+
+sqlite3
+sqlite
+
+/todo.txt
