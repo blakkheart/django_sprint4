@@ -42,7 +42,7 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         return reverse(
             'blog:profile',
             kwargs={'profile_slug': self.object.author}  # type: ignore
-            )
+        )
 
     def form_valid(self, form):
         form.instance.author = self.request.user
@@ -224,4 +224,4 @@ class CommentDeleteView(LoginRequiredMixin, DeleteView):
         return reverse(
             'blog:post_detail',
             kwargs={'pk': self.get_object().post_id}  # type: ignore
-            )
+        )
