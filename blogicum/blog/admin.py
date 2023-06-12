@@ -99,6 +99,7 @@ class LocationAdmin(admin.ModelAdmin):
         PostTabilarInLine,
     )
 
+
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
     list_display = (
