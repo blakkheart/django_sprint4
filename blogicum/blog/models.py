@@ -1,8 +1,5 @@
-from django.db import models
 from django.contrib.auth import get_user_model
-from django.utils import timezone
-
-import datetime as dt
+from django.db import models
 
 from core.models import PublishedAndCreatedModel
 
@@ -39,16 +36,6 @@ class Location(PublishedAndCreatedModel):
         return self.name
 
 
-class PublishedQueryset(models.QuerySet):
-
-    def published(self, **optional_filter):
-        return self.filter(**optional_filter,
-                           is_published=True,
-                           pub_date__lte=dt.datetime.now(tz=timezone.utc),
-                           category__is_published=True,
-                           )
-
-
 class Post(PublishedAndCreatedModel):
     title = models.CharField(max_length=256, verbose_name='Заголовок')
     text = models.TextField(verbose_name='Текст')
@@ -83,12 +70,6 @@ class Post(PublishedAndCreatedModel):
         upload_to='posts_images',
         verbose_name='Фото',
     )
-    objects = PublishedQueryset.as_manager()
-    comment_count = models.PositiveIntegerField(
-        default=0,
-        blank=True,
-        verbose_name='Количество комментариев',
-    )
 
     class Meta:
         verbose_name = 'публикация'
@@ -107,11 +88,6 @@ class Comment(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
-
-    # def save(self, *args, **kwargs):
-    #     if not self.pk:
-    #         Post.objects.filter(pk=self.pk).update(comment_count=F('comment_count')+1)
-    #     super().save(*args, **kwargs)
 
     class Meta:
         ordering = ('created_at',)
