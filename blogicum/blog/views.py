@@ -16,43 +16,42 @@ User = get_user_model()
 
 
 class PostUpdateDeleteMixin:
-    """
+    '''
     Mixin for update and delete comment class.
     Override dispatch method.
-    """
+    '''
     def dispatch(self, request, *args, **kwargs):
         instance = get_object_or_404(Post, pk=kwargs['pk'])
         if instance.author != request.user:
-            return redirect('blog:post_detail',
-                            self.get_object().pk)  # type: ignore
-        return super().dispatch(request, *args, **kwargs)  # type: ignore
+            return redirect('blog:post_detail', self.get_object().pk)
+        return super().dispatch(request, *args, **kwargs)
 
 
 class CommentUpdateDeleteMixin:
-    """
+    '''
     Mixin for update and delete comment class.
     Override dispatch and get_success_url methods.
-    """
+    '''
     def dispatch(self, request, *args, **kwargs):
         instance = get_object_or_404(Comment, pk=kwargs['pk'])
         if instance.author != request.user:
-            return redirect('blog:post_detail',
-                            self.get_object().pk)  # type: ignore
-        return super().dispatch(request, *args, **kwargs)  # type: ignore
+            return redirect('blog:post_detail', self.get_object().pk)
+        return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
-        return reverse('blog:post_detail',
-                       args=(self.get_object().post_id,))  # type: ignore
+        return reverse('blog:post_detail', args=(self.get_object().post_id,))
 
 
 class PostListView(ListView):
     '''Show all posts.'''
     model = Post
-    queryset = Post.objects.filter(
+    queryset = Post.objects.annotate(
+        comment_count=Count('comments')
+        ).filter(
         is_published=True,
         pub_date__lt=timezone.now(),
         category__is_published=True
-    ).annotate(comment_count=Count('comments'))
+    )
     ordering = '-pub_date'
     paginate_by = settings.PAGINATE_BY
     template_name = 'blog/index.html'
@@ -69,8 +68,7 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse('blog:profile',
-                       args=(self.object.author,))  # type: ignore
+        return reverse('blog:profile', args=(self.object.author,))
 
 
 class PostDetailView(DetailView):
@@ -82,7 +80,7 @@ class PostDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         context['form'] = CommentForm()
         context['comments'] = (
-            self.object.comments.select_related('author')  # type: ignore
+            self.object.comments.select_related('author')
         )
         return context
 
@@ -94,8 +92,7 @@ class PostUpdateView(LoginRequiredMixin, PostUpdateDeleteMixin, UpdateView):
     template_name = 'blog/create.html'
 
     def get_success_url(self):
-        return reverse('blog:post_detail',
-                       args=(self.object.pk,))  # type: ignore
+        return reverse('blog:post_detail', args=(self.object.pk,))
 
 
 class PostDeleteView(LoginRequiredMixin, PostUpdateDeleteMixin, DeleteView):
@@ -104,8 +101,7 @@ class PostDeleteView(LoginRequiredMixin, PostUpdateDeleteMixin, DeleteView):
     template_name = 'blog/create.html'
 
     def get_success_url(self):
-        return reverse('blog:profile',
-                       args=(self.request.user.username,))  # type: ignore
+        return reverse('blog:profile', args=(self.request.user.username,))
 
 
 class CategoryDetailView(ListView):
@@ -121,16 +117,17 @@ class CategoryDetailView(ListView):
             slug=self.kwargs['slug'],
             is_published=True
         )
-        return super().get_queryset().filter(
+        return super().get_queryset().annotate(
+            comment_count=Count('comments')
+            ).filter(
             is_published=True,
             pub_date__lt=timezone.now(),
             category__slug=self.kwargs['slug']
-        ).annotate(comment_count=Count('comments'))
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        category = Category.objects.get(
-            slug=self.kwargs['slug'])
+        category = Category.objects.get(slug=self.kwargs['slug'])
         context['category'] = category
         return context
 
@@ -143,15 +140,17 @@ class UserListView(ListView):
     ordering = '-pub_date'
 
     def get_queryset(self):
-        if self.request.user.username == self.kwargs['slug']:  # type: ignore
-            return super().get_queryset().filter(
-                author__username=self.kwargs['slug']
-            ).annotate(comment_count=Count('comments'))
-        return super().get_queryset().filter(
+        if self.request.user.username == self.kwargs['slug']:
+            return super().get_queryset().annotate(
+                comment_count=Count('comments')
+            ).filter(author__username=self.kwargs['slug'])
+        return super().get_queryset().annotate(
+            comment_count=Count('comments')
+            ).filter(
             is_published=True,
             pub_date__lt=timezone.now(),
             author__username=self.kwargs['slug']
-        ).annotate(comment_count=Count('comments'))
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -170,8 +169,7 @@ class UserUpdateView(LoginRequiredMixin, UpdateView):
         return self.request.user
 
     def get_success_url(self):
-        return reverse('blog:profile',
-                       args=(self.request.user.username,))  # type: ignore
+        return reverse('blog:profile', args=(self.request.user.username,))
 
 
 class CommentCreateView(LoginRequiredMixin, CreateView):
@@ -192,8 +190,7 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse('blog:post_detail',
-                       args=(self.object.post_id,))  # type: ignore
+        return reverse('blog:post_detail', args=(self.object.post_id,))
 
 
 class CommentUpdateView(LoginRequiredMixin,
