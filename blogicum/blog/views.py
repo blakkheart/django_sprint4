@@ -47,7 +47,7 @@ class PostListView(ListView):
     model = Post
     queryset = Post.objects.annotate(
         comment_count=Count('comments')
-        ).filter(
+    ).filter(
         is_published=True,
         pub_date__lt=timezone.now(),
         category__is_published=True
@@ -119,7 +119,7 @@ class CategoryDetailView(ListView):
         )
         return super().get_queryset().annotate(
             comment_count=Count('comments')
-            ).filter(
+        ).filter(
             is_published=True,
             pub_date__lt=timezone.now(),
             category__slug=self.kwargs['slug']
@@ -146,7 +146,7 @@ class UserListView(ListView):
             ).filter(author__username=self.kwargs['slug'])
         return super().get_queryset().annotate(
             comment_count=Count('comments')
-            ).filter(
+        ).filter(
             is_published=True,
             pub_date__lt=timezone.now(),
             author__username=self.kwargs['slug']
